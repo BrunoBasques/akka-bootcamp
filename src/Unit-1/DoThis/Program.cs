@@ -34,11 +34,11 @@ namespace WinTail
             Console.WriteLine("Write whatever you want into the console!");
             Console.Write("Some lines will appear as");
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.Write(" red ");
+            Console.Write(" magenta ");
             Console.ResetColor();
             Console.Write(" and others will appear as");
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write(" green! ");
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.Write(" blue! ");
             Console.ResetColor();
             Console.WriteLine();
             Console.WriteLine();
