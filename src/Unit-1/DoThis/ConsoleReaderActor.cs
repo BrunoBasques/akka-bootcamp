@@ -28,12 +28,11 @@ namespace WinTail
 
             GetAndValidateInput();
         }
+
         #region Internal Methods
         private void DoPrintInstructions()
         {
-            Console.WriteLine("Write whatever you want into the console!");
-            Console.WriteLine("Some entries will pass validation, and some won't...\n\n");
-            Console.WriteLine("Type 'exit' to quit this application at any time.\n");
+            Console.WriteLine("Please provide the URI of a log file on disk");
         }
 
         /// <summary>
@@ -43,7 +42,7 @@ namespace WinTail
         private void GetAndValidateInput()
         {
             string message = Console.ReadLine();
-            if (string.IsNullOrEmpty(message) && String.Equals(message, ExitCommand, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(message) && String.Equals(message, ExitCommand, StringComparison.OrdinalIgnoreCase))
             {
                 // if user typed ExitCommand, shut down the entire actor
                 // system (allows the process to exit)
