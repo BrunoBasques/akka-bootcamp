@@ -50,6 +50,8 @@ namespace WinTail
             }
         }
 
+        // here we are overriding the default SupervisorStrategy
+        // which is a One-For-One strategy w/ a Restart directive
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new OneForOneStrategy(
