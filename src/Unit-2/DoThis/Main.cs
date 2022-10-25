@@ -10,7 +10,6 @@ namespace ChartApp
     public partial class Main : Form
     {
         private IActorRef _chartActor;
-        private readonly AtomicCounter _seriesCounter = new AtomicCounter(1);
         private IActorRef _coordinatorActor;
         private Dictionary<CounterType, IActorRef> _toggleActors = new Dictionary<CounterType, IActorRef>();
 
@@ -25,7 +24,7 @@ namespace ChartApp
         private void Main_Load(object sender, EventArgs e)
         {
             _chartActor = Program.ChartActors.ActorOf(
-                Props.Create(() => new ChartingActor(sysChart)), "charting");
+                Props.Create(() => new ChartingActor(sysChart, btnPauseResume)), "charting");
             _chartActor.Tell(new ChartingActor.InitializeChart(null)); // no initial series
             _coordinatorActor = Program.ChartActors.ActorOf(
                 Props.Create(() => new PerformanceCounterCoordinatorActor(_chartActor)), "counters");
@@ -77,7 +76,13 @@ namespace ChartApp
         private void btnDisk_Click(object sender, EventArgs e)
         {
             _toggleActors[CounterType.Disk].Tell(new ButtonToggleActor.Toggle());
+        }       
+
+        private void btnPauseResume_Click(object sender, EventArgs e)
+        {
+            _chartActor.Tell(new ChartingActor.TogglePause());
         }
+
         #endregion
     }
 }
