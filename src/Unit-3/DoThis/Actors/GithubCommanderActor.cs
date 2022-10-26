@@ -44,10 +44,10 @@ namespace GithubActors.Actors
 
         #endregion
 
-        public IStash Stash { get; set; }
         private IActorRef _coordinator;
         private IActorRef _canAcceptJobSender;
-        private int _pendingJobReplies;
+        private int pendingJobReplies;
+
         public GithubCommanderActor()
         {
             Ready();
@@ -58,6 +58,7 @@ namespace GithubActors.Actors
             Receive<CanAcceptJob>(job =>
             {
                 _coordinator.Tell(job);
+
                 BecomeAsking();
             });
         }
@@ -65,19 +66,19 @@ namespace GithubActors.Actors
         private void BecomeAsking()
         {
             _canAcceptJobSender = Sender;
-            _pendingJobReplies = 3; // the number of routees
+            pendingJobReplies = 3; //the number of routees
             Become(Asking);
         }
 
         private void Asking()
         {
-            // stash any subsequent requests
+            //stash any subsequent requests
             Receive<CanAcceptJob>(job => Stash.Stash());
 
             Receive<UnableToAcceptJob>(job =>
             {
-                _pendingJobReplies--;
-                if (_pendingJobReplies == 0)
+                pendingJobReplies--;
+                if (pendingJobReplies == 0)
                 {
                     _canAcceptJobSender.Tell(job);
                     BecomeReady();
@@ -88,12 +89,11 @@ namespace GithubActors.Actors
             {
                 _canAcceptJobSender.Tell(job);
 
-                // start processing messages
+                //start processing messages
                 Sender.Tell(new GithubCoordinatorActor.BeginJob(job.Repo));
 
-                // launch the new window to view results of the processing
-                Context.ActorSelection(ActorPaths.MainFormActor.Path)
-                .Tell(new MainFormActor.LaunchRepoResultsWindow(job.Repo, Sender));
+                //launch the new window to view results of the processing
+                Context.ActorSelection(ActorPaths.MainFormActor.Path).Tell(new MainFormActor.LaunchRepoResultsWindow(job.Repo, Sender));
 
                 BecomeReady();
             });
@@ -105,22 +105,17 @@ namespace GithubActors.Actors
             Stash.UnstashAll();
         }
 
-
         protected override void PreStart()
         {
-            // create three GithubCoordinatorActor instances
-            var c1 = Context.ActorOf(Props.Create(() => new GithubCoordinatorActor()), 
-                ActorPaths.GithubCoordinatorActor.Name + "1");
-            var c2 = Context.ActorOf(Props.Create(() => new GithubCoordinatorActor()),
-                ActorPaths.GithubCoordinatorActor.Name + "2");
-            var c3 = Context.ActorOf(Props.Create(() => new GithubCoordinatorActor()),
-                ActorPaths.GithubCoordinatorActor.Name + "3");
+            //create three GithubCoordinatorActor instances
+            var c1 = Context.ActorOf(Props.Create(() => new GithubCoordinatorActor()), ActorPaths.GithubCoordinatorActor.Name + "1");
+            var c2 = Context.ActorOf(Props.Create(() => new GithubCoordinatorActor()), ActorPaths.GithubCoordinatorActor.Name + "2");
+            var c3 = Context.ActorOf(Props.Create(() => new GithubCoordinatorActor()), ActorPaths.GithubCoordinatorActor.Name + "3");
 
-            // create a broadcast router who will ask all of them if they're available for work
-            _coordinator = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(
-                ActorPaths.GithubCoordinatorActor.Name + "1",
-                ActorPaths.GithubCoordinatorActor.Name + "2",
-                ActorPaths.GithubCoordinatorActor.Name + "3")));
+            //create a broadcast router who will ask all of them if they're available for work
+            _coordinator =
+                Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(ActorPaths.GithubCoordinatorActor.Path + "1",
+                    ActorPaths.GithubCoordinatorActor.Path + "2", ActorPaths.GithubCoordinatorActor.Path + "3")));
             base.PreStart();
         }
 
@@ -130,5 +125,7 @@ namespace GithubActors.Actors
             _coordinator.Tell(PoisonPill.Instance);
             base.PreRestart(reason, message);
         }
+
+        public IStash Stash { get; set; }
     }
 }
