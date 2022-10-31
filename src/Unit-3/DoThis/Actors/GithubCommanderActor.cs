@@ -46,7 +46,9 @@ namespace GithubActors.Actors
 
         private IActorRef _coordinator;
         private IActorRef _canAcceptJobSender;
-        private int pendingJobReplies;
+        private int _pendingJobReplies;
+        private RepoKey _repoJob;
+
 
         public GithubCommanderActor()
         {
@@ -58,7 +60,7 @@ namespace GithubActors.Actors
             Receive<CanAcceptJob>(job =>
             {
                 _coordinator.Tell(job);
-
+                _repoJob = job.Repo;
                 BecomeAsking();
             });
         }
@@ -67,9 +69,12 @@ namespace GithubActors.Actors
         {
             _canAcceptJobSender = Sender;
             // block, but ask the router for the number of routees. Avoids magic numbers
-            pendingJobReplies = _coordinator.Ask<Routees>(new GetRoutees())
+            _pendingJobReplies = _coordinator.Ask<Routees>(new GetRoutees())
                 .Result.Members.Count();
             Become(Asking);
+
+            // send ourselves s ReceiveTimeout message if no message within 3 seconds
+            Context.SetReceiveTimeout(TimeSpan.FromSeconds(3));
         }
 
         private void Asking()
@@ -79,8 +84,8 @@ namespace GithubActors.Actors
 
             Receive<UnableToAcceptJob>(job =>
             {
-                pendingJobReplies--;
-                if (pendingJobReplies == 0)
+                _pendingJobReplies--;
+                if (_pendingJobReplies == 0)
                 {
                     _canAcceptJobSender.Tell(job);
                     BecomeReady();
@@ -99,12 +104,22 @@ namespace GithubActors.Actors
 
                 BecomeReady();
             });
+
+            // means at least one actor failed to respond
+            Receive<ReceiveTimeout>(timeout =>
+            {
+                _canAcceptJobSender.Tell(new UnableToAcceptJob(_repoJob));
+                BecomeReady();
+            });
         }
 
         private void BecomeReady()
         {
             Become(Ready);
             Stash.UnstashAll();
+
+            // cancel ReceiveTimeout
+            Context.SetReceiveTimeout(null);
         }
 
         protected override void PreStart()
